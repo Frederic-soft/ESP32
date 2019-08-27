@@ -208,7 +208,7 @@ class BME280 :
     self.i2c.readfrom_mem_into(self.addr, BME280.CONF_REG, buf)
     buf[0] &= ~BME280.STDBY_MASK
     buf[0] |= (standby << BME280.STDBY_TIME)
-    self.i2c.writeto_mem(self.addr, BME280.MEAS_REG, buf)
+    self.i2c.writeto_mem(self.addr, BME280.CONF_REG, buf)
     
   """
   Configure the IIR filter.
