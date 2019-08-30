@@ -1,0 +1,6 @@
+{
+  1: {"ssid":"MyFirstNetwork", "pword":"password4net1"},
+  2: {"ssid":"My2ndNetwork", "pword":"password4net2"},
+ -1: {"ssid":"MyDefaultNetwork", "pword":"password4default"},
+}
+ 
