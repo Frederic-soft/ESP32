@@ -1,0 +1,217 @@
+<!--
+ index.html for Micropython on ESP32
+
+ This is an example of use of an HTTP server and a Web Socket server
+ for displaying the temperature, pressure and relative humidity read from a BME280 sensor.
+ This file should be put in the /www directory on the ESP32 for use with BMEserver.py.
+
+ © Frédéric Boulanger <frederic.softdev@gmail.com>
+ 2020-05-10 –– 2020-05-19
+ This software is licensed under the Eclipse Public License 2.0
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>BME280 weather station</title>
+</head>
+
+<script language="javascript">
+  var webSocket;          // The websocket for interacting with the ESP32
+  var refreshinterval;    // Time in ms between two requests to refresh the status of the board
+  var debugMsg = false;   // Display data exchanged with the web socket server
+  
+  // Update the information from the ESP32
+  function updateInfo(infos) {
+    var led = infos[0];     // The LED status is the first (and only) item n the infos
+    if (parseInt(led) > 0) {
+      document.getElementById("led").setAttribute("fill", "blue");
+    } else {
+      document.getElementById("led").setAttribute("fill", "none");
+    }
+    var temp = (parseInt(infos[1], 10) / 100).toFixed(2) ;  // two digits after the decimal point
+    var pres = (parseInt(infos[2], 10) / 100).toFixed(2) ;  // two digits after the decimal point
+    var hum  = (parseInt(infos[3], 10) / 100).toFixed(2) ;  // two digits after the decimal point
+    var alti = parseInt(infos[4], 10) ;
+    document.getElementById("temp").innerHTML = temp.toString() + "°C";
+    document.getElementById("pres").innerHTML = pres.toString() + "hPa";
+    document.getElementById("hum").innerHTML = hum.toString() + "%";
+    if (document.activeElement.id != "altitude") {  // Update altitude only if it is not being edited
+    	document.getElementById("altitude").value = alti ;
+    }
+  }
+  
+  // Send a message to the websocket server
+  function sendMessage(str) {
+    webSocket.send(str);
+    webSocket.send("\n");
+    if (debugMsg) {
+      var term = document.getElementById("transcript");
+      term.innerHTML = term.innerHTML + '<span style="color: blue;">' + str + '<br/></span>' ;
+    }
+  }
+  
+  // Force a refresh of the status of the board by sending 
+  // the "STAT" command to the web socket server.
+  function refresh() {
+    sendMessage("STAT");
+  }
+  
+  // Executed when the connection to the web socket server opens
+  function onOpen(evt) {
+    // The connection is open, but we still have to give the right password,
+    // so the connection is only orange, not green.
+    document.getElementById("connection").setAttribute("fill", "orange");
+  }
+  
+  // Executed when the connection to the web socket server is closed
+  function onClose(evt) {
+    document.getElementById("connection").setAttribute("fill", "red");
+    document.getElementById("conn_btn").disabled = false;
+    document.getElementById("disconn_btn").disabled = true;
+    // Stop asking for updates of the status of the board
+    clearInterval(refreshinterval);
+  }
+  
+  // Executed when a message is received from the web socket server
+  function onMessage(evt) {
+    if (debugMsg) {
+      var term = document.getElementById("transcript");
+      term.innerHTML = term.innerHTML + '<span style="color: green;">'
+                                      + evt.data.replace(/\r|\n/g, '<br/>')
+                                      + '</span>';
+    }
+    var args = evt.data.trim().split(" ");
+    switch (args[0]) {
+      case "UPDATE":               // Update the display of the status of the board
+        updateInfo(args.slice(1));
+        break;
+      case "WebREPL":              // We are really connected to the server
+        document.getElementById("connection").setAttribute("fill", "green");
+        document.getElementById("conn_btn").disabled = true;
+        document.getElementById("disconn_btn").disabled = false;
+        refreshinterval = setInterval(refresh, 1000); // refresh data every 1s
+        refresh();
+        break;
+      case "Password:":            // Password prompt
+        sendMessage("");           // Here, we use an empty password
+        break;
+      default:                     // Useful for debugging, but other messages could be ignored
+        window.alert("Unknown command: '" + args + "'");
+    }
+  }
+  
+  // Executed when an error occurs in the connection to the web socket server
+  function onError(evt) {
+    window.alert("Error: " + evt.data);
+  }
+  
+  // Connect to the web socket server
+  function connect() {
+    webSocket = new WebSocket(getWSurl());
+    // Install the callback functions
+    webSocket.onopen = onOpen;
+    webSocket.onclose = onClose;
+    webSocket.onmessage = onMessage;
+    webSocket.onerror = onError;
+  }
+
+  // Close the connection to the web socket server by sending Ctrl-C
+  function disconnect() {
+    sendMessage("\x03");  // Ctrl-C ends the connection to the server
+  }
+
+  // Ask the server to switch on the builtin LED of the board
+  function ledOn() {
+    sendMessage("LED_ON");
+  };
+  
+  // Ask the server to switch off the builtin LED of the board
+  function ledOff() {
+    sendMessage("LED_OFF");
+  };
+  
+  // Tell the server the value of the altitude
+  function setAltitude() {
+    var alt = parseInt(document.getElementById("altitude").value, 10);
+    if (isNaN(alt)) {
+    	alt = 0
+    }
+    document.getElementById("altitude").value = alt;
+    sendMessage("SET_ALT " + alt);
+  };
+  
+  // Build the URL of the websocket server, which is on port 8080 on the same host as the HTTP server
+  function getWSurl() {
+    return "ws://" + window.location.hostname + ":8080" ;
+  };
+
+  // Initialize the page. Here, we just display the URL of the web socket server.
+  function init() {
+    document.getElementById("websock_url").innerHTML = getWSurl() ;
+  };
+
+  window.addEventListener("load", init, false);
+</script>
+
+<body>
+
+<div style="display:inline-block; width:70pt; vertical-align:middle;">
+<!--
+This section displays the status of the builtin LED, with two buttons for switching it on or off
+-->
+<p align="middle">
+<svg height="24" width="70" style="vertical-align:bottom;">
+  <circle id="led" cx="12" cy="12" r="10" fill="grey" stroke="black" stroke-width="2"/>
+  <text x="27", y="12" font-family="Sans-Serif" font-size="20" dominant-baseline="middle">LED</text>
+</svg>
+<br/>
+<button onclick="ledOn()">on</button>
+<button onclick="ledOff()">off</button>
+</p>
+</div>
+
+<div style="display: inline-block; vertical-align:middle;">
+<!--
+This section displays the status of the connection, with two buttons for connecting and deconnecting
+-->
+<p>
+<svg height="24" width="24" style="vertical-align:bottom;">
+  <circle id="connection" cx="12" cy="12" r="12"
+          fill="red" stroke="white" stroke-width="2"/>
+  </text>
+</svg>
+<span id="websock_url" style="font-family: Sans-Serif;">unknown</span>
+<br/>
+<button id="conn_btn" onclick="connect()">connect</button>
+<button id="disconn_btn" onclick="disconnect()" disabled>disconnect</button>
+</p>
+</div>
+
+<!--
+This section displays the information read from the BME280
+-->
+<div>
+<table>
+  <tr>
+    <td>Temperature:</td><td id="temp"></td>
+  </tr>
+  <tr>
+    <td>Sea level pressure:</td><td id="pres"></td>
+    <td>(altitude is <input type="text" id="altitude" maxlength=4 size=3 name="altitude" value="0" onchange="setAltitude()">m)</input></td>
+  </tr>
+  <tr>
+    <td>Humidity:</td><td id="hum"></td>
+  </tr>
+</table>
+</div>
+
+<!--
+This section is used to display the data exchanged with the server when debugMsg is true.
+-->
+<div id="transcript" style="overflow:scroll; height:500px; font-family:monospace;">
+</div>
+
+</body>
+
+</html>

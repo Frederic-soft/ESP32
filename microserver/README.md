@@ -8,3 +8,6 @@ The wsserver module uses the websocket implementation that is available in Micro
 The ledserver module is an example of use of the two previous modules. Combined with the index.html file (which should be put in a 'www' directory at the root of the file system of the ESP32), it lets you switch on or off, and get the status of the builtin LED of the ESP32.
 
 <img width="518" src="websocketinterface.png"/>
+
+There is also an example of use of these modules to display the temperature, pressure and humidity read from a BME280 sensor in the [BME280 module](../BME280/server/)
+
