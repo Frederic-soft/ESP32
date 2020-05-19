@@ -9,7 +9,7 @@ The following diagram shows how to use the BME280 with a 7-segment display (see 
 ## Example of use with a websocket/http server
 The server directory contains an example of use of the BME280 with a websocket/http server (see the [microserver](../microserver/) directory.
 
-<img width="800" src="BME_Server_bb.png"/>
+<img width="800" src="BME_server_bb.png"/>
 
 © Frédéric Boulanger <frederic.softdev@gmail.com>  
 2019-08-26  – 2020-05-19
