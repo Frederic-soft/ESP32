@@ -1,2 +1,2 @@
 # ESP32
-ESP32 development
+ESP32 specific Micropython modules
